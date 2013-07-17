@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Master Key dual fix</string>
+    <string name="about_title">Android vulnerability fixes</string>
+    <string name="about_author">By <a href="mailto:Tungstwenty@gmail.com">Tungstwenty</a> @ <a href="http://forum.xda-developers.com/member.php?u=4322181">XDA Developers</a></string>
+    <string name="about_description">This patch addresses 2 vulnerability issues recently found on Android:\n- \'Master Key\'
+\n- \'bug 9695860\'\nBoth of these allow <b>exploiting signed APKs</b> by replacing the code they contain while maintaining
+the existing signature valid, leading you to think the original author is someone you trust.\nThe original Android sources have been corrected to fix both situations, but it might take a while
+till stock ROMs include the fixes, if ever.\n\nFor any questions, please visit <a href="http://forum.xda-developers.com/showthread.php?t=2365294">this thread</a>.</string>
+    <string name="about_noconfigs">This appliction does not have any configurations.
+It is an Xposed mod that should be enabled on its framework manager to produce effects!</string>
+    <string name="about_active">The patch is active. You should be protected from
+these 2 vulnerabilities.</string>
+    <string name="about_notactive"><b>Note</b>: The patch is not active! Verify that you have
+installed the <a href="http://forum.xda-developers.com/showthread.php?t=1574401">Xposed framework</a>
+and that you have enabled this module.</string>
+</resources>
