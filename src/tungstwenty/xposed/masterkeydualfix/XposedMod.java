@@ -2,6 +2,7 @@ package tungstwenty.xposed.masterkeydualfix;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -16,6 +17,17 @@ public class XposedMod implements IXposedHookZygoteInit, IXposedHookLoadPackage 
 
 	@Override
 	public void initZygote(StartupParam startupParam) throws Throwable {
+		findAndHookMethod(ZipFile.class, "getInputStream", ZipEntry.class, new XC_MethodHook() {
+			@Override
+			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+				try {
+					param.setResult(ZipFilePatch.getInputStream((ZipFile) param.thisObject, (ZipEntry) param.args[0]));
+				} catch (Exception ex) {
+					param.setThrowable(ex);
+				}
+			}
+		});
+
 		findAndHookMethod(ZipFile.class, "readCentralDir", new XC_MethodHook() {
 			@Override
 			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {

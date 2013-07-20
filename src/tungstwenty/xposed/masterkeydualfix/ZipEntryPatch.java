@@ -19,16 +19,16 @@ public class ZipEntryPatch {
 	private static final long CENSIG = 0x2014b50;
 
 	private static final int GPBF_ENCRYPTED_FLAG = 1 << 0;
-	private static final int GPBF_UNSUPPORTED_MASK = GPBF_ENCRYPTED_FLAG;
+	/* package */ static final int GPBF_UNSUPPORTED_MASK = GPBF_ENCRYPTED_FLAG;
 
 	private static final Charset UTF_8 = Charset.forName("UTF-8");
 
 
-	private static Field fldCompressionMethod;
+	/* package */ static Field fldCompressionMethod;
 	private static Field fldTime;
 	private static Field fldModDate;
-	private static Field fldNameLength;
-	private static Field fldLocalHeaderRelOffset;
+	/* package */ static Field fldNameLength;
+	/* package */ static Field fldLocalHeaderRelOffset;
 	private static Field fldName;
 
 	
