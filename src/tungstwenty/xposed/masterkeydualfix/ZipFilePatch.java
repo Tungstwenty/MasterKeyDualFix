@@ -1,5 +1,7 @@
 package tungstwenty.xposed.masterkeydualfix;
 
+import static de.robv.android.xposed.XposedHelpers.findClass;
+import static de.robv.android.xposed.XposedHelpers.findConstructorExact;
 import static de.robv.android.xposed.XposedHelpers.findField;
 
 import java.io.BufferedInputStream;
@@ -7,7 +9,9 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteOrder;
 import java.util.Map;
 import java.util.zip.Inflater;
@@ -18,8 +22,8 @@ import java.util.zip.ZipFile;
 
 import libcore.io.BufferIterator;
 import libcore.io.HeapBufferIterator;
-import libcore.io.Streams;
 
+@SuppressWarnings("unchecked")
 public class ZipFilePatch {
 
 	private static final int ENDHDR = 22;
@@ -27,6 +31,12 @@ public class ZipFilePatch {
 
 	private static Field fldEntries;
 	private static Field fldRaf;
+
+	private static Field fldOffset;
+	private static Field fldLength;
+
+	private static Constructor<InputStream> newRAFStream;
+	private static Constructor<InflaterInputStream> newZipInflaterInputStream;
 
 	static {
 		try {
@@ -39,6 +49,22 @@ public class ZipFilePatch {
 		} catch (Throwable t) {
 			fldRaf = findField(ZipFile.class, "raf");
 		}
+		Class<?> clsRAFStream = findClass("java.util.zip.ZipFile.RAFStream", ZipFile.class.getClassLoader());
+		newRAFStream = (Constructor<InputStream>) findConstructorExact(clsRAFStream, RandomAccessFile.class, long.class);
+		try {
+			fldOffset = findField(clsRAFStream, "offset");
+		} catch (Throwable t) {
+			fldOffset = findField(clsRAFStream, "mOffset");
+		}
+		try {
+			fldLength = findField(clsRAFStream, "length");
+		} catch (Throwable t) {
+			fldLength = findField(clsRAFStream, "mLength");
+		}
+		Class<?> clsZipInflaterInputStream = findClass("java.util.zip.ZipFile.ZipInflaterInputStream",
+		    ZipFile.class.getClassLoader());
+		newZipInflaterInputStream = (Constructor<InflaterInputStream>) findConstructorExact(clsZipInflaterInputStream,
+		    InputStream.class, Inflater.class, int.class, ZipEntry.class);
 	}
 
 	private ZipFilePatch() {
@@ -61,7 +87,9 @@ public class ZipFilePatch {
 				// position of the entry's local header. At position 6 we find the
 				// General Purpose Bit Flag.
 				// http://www.pkware.com/documents/casestudies/APPNOTE.TXT
-				RAFStream rafStream = new RAFStream(localRaf, ZipEntryPatch.fldLocalHeaderRelOffset.getLong(entry) + 6);
+				InputStream rafStream = newRAFStream.newInstance(localRaf,
+				    ZipEntryPatch.fldLocalHeaderRelOffset.getLong(entry) + 6);
+
 				DataInputStream is = new DataInputStream(rafStream);
 				int gpbf = Short.reverseBytes(is.readShort()) & 0xffff;
 
@@ -77,14 +105,23 @@ public class ZipFilePatch {
 
 				// Skip the name and this "extra" data or whatever it is:
 				rafStream.skip(ZipEntryPatch.fldNameLength.getInt(entry) + localExtraLenOrWhatever);
-				rafStream.length = rafStream.offset + entry.getCompressedSize();
+				fldLength.setLong(rafStream, fldOffset.getLong(rafStream) + entry.getCompressedSize());
 				if (ZipEntryPatch.fldCompressionMethod.getInt(entry) == ZipEntry.DEFLATED) {
 					int bufSize = Math.max(1024, (int) Math.min(entry.getSize(), 65535L));
-					return new ZipInflaterInputStream(rafStream, new Inflater(true), bufSize, entry);
+					return newZipInflaterInputStream.newInstance(rafStream, new Inflater(true), bufSize, entry);
 				} else {
 					return rafStream;
 				}
 			}
+		} catch (InvocationTargetException e) {
+			Throwable cause = e.getCause();
+			if (cause instanceof IOException)
+				throw (IOException) cause;
+			if (cause instanceof RuntimeException)
+				throw (RuntimeException) cause;
+			throw new Error(cause);
+		} catch (InstantiationException e) {
+			throw new Error(e);
 		} catch (IllegalAccessException e) {
 			throw new IllegalAccessError(e.getMessage());
 		}
@@ -144,10 +181,9 @@ public class ZipFilePatch {
 			}
 
 			// Seek to the first CDE and read all entries.
-			RAFStream rafs = new RAFStream(mRaf, centralDirOffset);
+			InputStream rafs = newRAFStream.newInstance(mRaf, centralDirOffset);
 			BufferedInputStream bin = new BufferedInputStream(rafs, 4096);
 			byte[] hdrBuf = new byte[CENHDR]; // Reuse the same buffer for each entry.
-			@SuppressWarnings("unchecked")
 			Map<String, ZipEntry> mEntries = (Map<String, ZipEntry>) fldEntries.get(zipFile);
 			for (int i = 0; i < numEntries; ++i) {
 				ZipEntry newEntry = ZipEntryPatch.loadFromStream(hdrBuf, bin);
@@ -156,91 +192,17 @@ public class ZipFilePatch {
 					throw new ZipException("Duplicate entry name: " + entryName);
 				}
 			}
+		} catch (InvocationTargetException e) {
+			Throwable cause = e.getCause();
+			if (cause instanceof IOException)
+				throw (IOException) cause;
+			if (cause instanceof RuntimeException)
+				throw (RuntimeException) cause;
+			throw new Error(cause);
+		} catch (InstantiationException e) {
+			throw new Error(e);
 		} catch (IllegalAccessException e) {
 			throw new IllegalAccessError(e.getMessage());
-		}
-	}
-
-	private static class RAFStream extends InputStream {
-
-		private RandomAccessFile sharedRaf;
-		private long offset;
-		private long length;
-
-		public RAFStream(RandomAccessFile raf, long pos) throws IOException {
-			sharedRaf = raf;
-			offset = pos;
-			length = raf.length();
-		}
-
-		@Override
-		public int available() throws IOException {
-			return (offset < length ? 1 : 0);
-		}
-
-		@Override
-		public int read() throws IOException {
-			return Streams.readSingleByte(this);
-		}
-
-		@Override
-		public int read(byte[] b, int off, int len) throws IOException {
-			synchronized (sharedRaf) {
-				sharedRaf.seek(offset);
-				if (len > length - offset) {
-					len = (int) (length - offset);
-				}
-				int count = sharedRaf.read(b, off, len);
-				if (count > 0) {
-					offset += count;
-					return count;
-				} else {
-					return -1;
-				}
-			}
-		}
-
-		@Override
-		public long skip(long byteCount) throws IOException {
-			if (byteCount > length - offset) {
-				byteCount = length - offset;
-			}
-			offset += byteCount;
-			return byteCount;
-		}
-	}
-
-	private static class ZipInflaterInputStream extends InflaterInputStream {
-		private final ZipEntry entry;
-		private long bytesRead = 0;
-
-		public ZipInflaterInputStream(InputStream is, Inflater inf, int bsize, ZipEntry entry) {
-			super(is, inf, bsize);
-			this.entry = entry;
-		}
-
-		@Override
-		public int read(byte[] buffer, int byteOffset, int byteCount) throws IOException {
-			int i = super.read(buffer, byteOffset, byteCount);
-			if (i != -1) {
-				bytesRead += i;
-			}
-			return i;
-		}
-
-		@Override
-		public int available() throws IOException {
-			// if (closed) {
-			// // Our superclass will throw an exception, but there's a jtreg test that
-			// // explicitly checks that the InputStream returned from ZipFile.getInputStream
-			// // returns 0 even when closed.
-			// return 0;
-			// }
-			try {
-				return super.available() == 0 ? 0 : (int) (entry.getSize() - bytesRead);
-			} catch (IOException ex) {
-				return 0;
-			}
 		}
 	}
 }
