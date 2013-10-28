@@ -4,7 +4,7 @@
     android:versionCode="4"
     android:versionName="1.3" xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-sdk android:minSdkVersion="15" tools:ignore="UsesMinSdkAttributes"/>
+    <uses-sdk android:minSdkVersion="10" tools:ignore="UsesMinSdkAttributes"/>
 
     <application
         android:icon="@drawable/ic_launcher"
