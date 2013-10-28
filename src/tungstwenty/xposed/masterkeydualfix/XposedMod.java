@@ -5,6 +5,7 @@ import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import android.os.Build;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XC_MethodHook;
@@ -17,6 +18,9 @@ public class XposedMod implements IXposedHookZygoteInit, IXposedHookLoadPackage 
 
 	@Override
 	public void initZygote(StartupParam startupParam) throws Throwable {
+
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+		// this bug was introduced in api-14
 		findAndHookMethod(ZipFile.class, "getInputStream", ZipEntry.class, new XC_MethodHook() {
 			@Override
 			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -27,12 +31,17 @@ public class XposedMod implements IXposedHookZygoteInit, IXposedHookLoadPackage 
 				}
 			}
 		});
+		}
 
 		findAndHookMethod(ZipFile.class, "readCentralDir", new XC_MethodHook() {
 			@Override
 			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 				try {
-					ZipFilePatch.readCentralDir((ZipFile) param.thisObject);
+					if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
+						ZipFilePatch.readCentralDir((ZipFile) param.thisObject);
+					} else {
+						ZipFilePatchGB.readCentralDir((ZipFile) param.thisObject);
+					}
 					param.setResult(null);
 				} catch (Exception ex) {
 					param.setThrowable(ex);
