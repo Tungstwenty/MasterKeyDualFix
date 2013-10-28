@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">主密钥双修复</string>
+    <string name="about_title">安卓漏洞修复</string>
+    <string name="about_author"><a href="mailto:Tungstwenty@gmail.com">Tungstwenty</a> @ <a href="http://forum.xda-developers.com/member.php?u=4322181">XDA Developers</a></string>
+    <string name="about_description">这个补丁解决最近在安卓上发现的两个漏洞:\n- \'主密钥\'
+\n- \'漏洞9695860\'\n它们允许保持签名有效情况下替换<b>签名APK包</b>中代码，让您误认为是由您信任的原作者发布。\n安卓官方已经修正了这两个漏洞，但是原生ROM可能需要一段时间才会修复，或者压根不会。\n\n有任何疑问，敬请访问<a href="http://forum.xda-developers.com/showthread.php?t=2365294">此帖(英文)</a>。</string>
+    <string name="about_noconfigs">这个程序不需要任何配置。它是一个Xposed模块，只需在Xposed框架中启用即可生效。</string>
+    <string name="about_active">补丁已经生效，您已经远离这两个漏洞。</string>
+    <string name="about_notactive"><b>注意</b>: 补丁没有生效！请确认已经安装<a href="http://forum.xda-developers.com/showthread.php?t=1574401">Xposed框架</a>并启用此模块。</string>
+</resources>
