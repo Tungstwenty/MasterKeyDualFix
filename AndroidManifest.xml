@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="tungstwenty.xposed.masterkeydualfix"
-    android:versionCode="4"
-    android:versionName="1.3" xmlns:tools="http://schemas.android.com/tools">
+    android:versionCode="5"
+    android:versionName="1.4a" xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-sdk android:minSdkVersion="15" tools:ignore="UsesMinSdkAttributes"/>
+    <uses-sdk android:minSdkVersion="10" android:targetSdkVersion="10" />
 
     <application
         android:icon="@drawable/ic_launcher"
