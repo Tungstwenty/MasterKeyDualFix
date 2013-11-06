@@ -22,8 +22,8 @@
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="Patches the ZIP/APK handling code to prevent both the 'Master Key'
-vulnerability and also 'bug 9695860'. By Tungstwenty@XDA" />
+            android:value="Patches the ZIP/APK handling code to prevent several vulnerabilities collectively known as
+'Master Key' exploits (bugs 8219321, 9695860, 9950697, and others). By Tungstwenty@XDA" />
         <meta-data
             android:name="xposedminversion"
             android:value="2.1+" />

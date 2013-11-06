@@ -1,14 +1,18 @@
-Master Key dual fix
+Master Key multi-fix
 by Tungstwenty
 
 
-Fixes 2 separate vulnerabilities that exist on the APK parsing code
+Fixes a few vulnerabilities that exist on the APK parsing code
 that allow signed files to be tampered with.
-One of these (bug 8219321)is known as the "Master Key" vulnerability, and can be found
+One of these (bug 8219321) is known as the "Master Key" vulnerability, and can be found
 in several places including this one: http://forum.xda-developers.com/showthread.php?t=2359943
-The other (bug 9695860) is also related with Zip (or APK) files parsing and although it's been
+Another one (bug 9695860) is also related with Zip (or APK) files parsing and although it's been
 fixed by Google on the codebase (https://android.googlesource.com/platform/libcore/+/9edf43dfcc35c761d97eb9156ac4254152ddbc55),
 it's likely to take even longer to reach the stock roms (if ever).
+After the initial disclosure and release of these fixes, additional flaws of a similar nature
+were found on the same Zip routines by several different folks independently, including myself,
+and only made public and fixed during the release of Android 4.4 source code. The most relevant of those is bug 9950697.
+These are also addressed by this module.
 
 Follow this thread for additional info: http://forum.xda-developers.com/showthread.php?t=2365294
 
