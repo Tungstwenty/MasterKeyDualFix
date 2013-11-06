@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 
@@ -21,7 +22,7 @@ public class ZipEntryPatch {
 	private static final int GPBF_ENCRYPTED_FLAG = 1 << 0;
 	/* package */ static final int GPBF_UNSUPPORTED_MASK = GPBF_ENCRYPTED_FLAG;
 
-	private static final Charset UTF_8 = Charset.forName("UTF-8");
+	static final Charset UTF_8 = Charset.forName("UTF-8");
 
 
 	/* package */ static Field fldCompressionMethod;
@@ -51,26 +52,27 @@ public class ZipEntryPatch {
 	private ZipEntryPatch() {
 	}
 
-	static ZipEntry loadFromStream(byte[] hdrBuf, BufferedInputStream in) throws IOException {
+	static ZipEntry loadFromStream(byte[] cdeHdrBuf, BufferedInputStream cdStream) throws IOException {
 		try {
 			ZipEntry result = new ZipEntry("");
-	
-			Streams.readFully(in, hdrBuf, 0, hdrBuf.length);
-	
-			BufferIterator it = HeapBufferIterator.iterator(hdrBuf, 0, hdrBuf.length, ByteOrder.LITTLE_ENDIAN);
-	
+
+			Streams.readFully(cdStream, cdeHdrBuf, 0, cdeHdrBuf.length);
+
+			BufferIterator it = HeapBufferIterator.iterator(cdeHdrBuf, 0, cdeHdrBuf.length,
+				ByteOrder.LITTLE_ENDIAN);
+
 			int sig = it.readInt();
 			if (sig != CENSIG) {
-				throw new ZipException("Central Directory Entry not found");
+				ZipFilePatch.throwZipException("Central Directory Entry", sig);
 			}
-	
+
 			it.seek(8);
 			int gpbf = it.readShort() & 0xffff;
-	
+
 			if ((gpbf & GPBF_UNSUPPORTED_MASK) != 0) {
 				throw new ZipException("Invalid General Purpose Bit Flag: " + gpbf);
 			}
-	
+
 			int compressionMethod;
 			compressionMethod = it.readShort() & 0xffff;
 			fldCompressionMethod.setInt(result, compressionMethod);
@@ -80,7 +82,7 @@ public class ZipEntryPatch {
 			int modDate;
 			modDate = it.readShort() & 0xffff;
 			fldModDate.setInt(result, modDate);
-	
+
 			// These are 32-bit values in the file, but 64-bit fields in this object.
 			long crc;
 			crc = ((long) it.readInt()) & 0xffffffffL;
@@ -91,46 +93,58 @@ public class ZipEntryPatch {
 			long size;
 			size = ((long) it.readInt()) & 0xffffffffL;
 			result.setSize(size);
-	
+
 			int nameLength;
 			nameLength = it.readShort() & 0xffff;
 			fldNameLength.setInt(result, nameLength);
 			int extraLength = it.readShort() & 0xffff;
 			int commentByteCount = it.readShort() & 0xffff;
-	
+
 			// This is a 32-bit value in the file, but a 64-bit field in this object.
 			it.seek(42);
 			long localHeaderRelOffset;
 			localHeaderRelOffset = ((long) it.readInt()) & 0xffffffffL;
 			fldLocalHeaderRelOffset.setLong(result, localHeaderRelOffset);
-	
+
 			byte[] nameBytes = new byte[nameLength];
-			Streams.readFully(in, nameBytes, 0, nameBytes.length);
+			Streams.readFully(cdStream, nameBytes, 0, nameBytes.length);
+			if (containsNulByte(nameBytes)) {
+				throw new ZipException("Filename contains NUL byte: " + Arrays.toString(nameBytes));
+			}
 			String name;
 			name = new String(nameBytes, 0, nameBytes.length, UTF_8);
 			fldName.set(result, name);
-	
+
+			if (extraLength > 0) {
+				byte[] extra;
+				extra = new byte[extraLength];
+				Streams.readFully(cdStream, extra, 0, extraLength);
+				result.setExtra(extra);
+			}
+
 			// The RI has always assumed UTF-8. (If GPBF_UTF8_FLAG isn't set, the encoding is
 			// actually IBM-437.)
 			if (commentByteCount > 0) {
 				byte[] commentBytes = new byte[commentByteCount];
-				Streams.readFully(in, commentBytes, 0, commentByteCount);
+				Streams.readFully(cdStream, commentBytes, 0, commentByteCount);
 				String comment;
 				comment = new String(commentBytes, 0, commentBytes.length, UTF_8);
 				result.setComment(comment);
-	
 			}
-	
-			if (extraLength > 0) {
-				byte[] extra;
-				extra = new byte[extraLength];
-				Streams.readFully(in, extra, 0, extraLength);
-				result.setExtra(extra);
-			}
+
 			return result;
 		} catch (IllegalAccessException e) {
 			throw new IllegalAccessError(e.getMessage());
 		}
+	}
+
+	private static boolean containsNulByte(byte[] bytes) {
+		for (byte b : bytes) {
+			if (b == 0) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 }
