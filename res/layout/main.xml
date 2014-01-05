@@ -32,12 +32,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/about_active"
-            android:textColor="#00C000" />
+            android:textColor="@android:color/holo_green_dark" />
         <TextView
             android:id="@+id/tvNotActive"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/about_notactive"
-            android:textColor="#C00000" />
+            android:textColor="@android:color/holo_red_dark" />
     </LinearLayout>
 </ScrollView>
